@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MEXC Meme Coin Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    #token-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .token {
+      background-color: white;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>MEXC Meme Coin Tracker</h1>
+  <label>
+    <input type="checkbox" id="filter-meme" />
+    فقط میم‌کوین‌ها را نمایش بده
+  </label>
+  <div id="token-list">در حال بارگذاری...</div>
+
+  <script>
+    const memeKeywords = ["dog", "shib", "inu", "pepe", "floki", "cat", "meme", "baby", "elon", "kishu"];
+
+    const container = document.getElementById("token-list");
+    const filterCheckbox = document.getElementById("filter-meme");
+
+    async function fetchTokens() {
+      const proxyUrl = "https://api.allorigins.win/get?url=";
+      const targetUrl = encodeURIComponent("https://www.mexc.com/announcement");
+      const response = await fetch(`${proxyUrl}${targetUrl}`);
+      const data = await response.json();
+      const html = data.contents;
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const items = Array.from(doc.querySelectorAll(".list-item")).map(el => el.textContent);
+
+      const tokenData = items
+        .filter(item => item.includes("will be listed"))
+        .map(item => {
+          const match = item.match(/\(([^)]+)\)/);
+          const symbol = match ? match[1] : "";
+          const name = item.split("(")[0].trim();
+          const dateMatch = item.match(/\d{4}-\d{2}-\d{2}/);
+          const date = dateMatch ? dateMatch[0] : "";
+          return { name, symbol, date, isMeme: isMemeCoin(name, symbol) };
+        });
+
+      displayTokens(tokenData);
+
+      filterCheckbox.addEventListener("change", () => {
+        displayTokens(tokenData);
+      });
+    }
+
+    function isMemeCoin(name, symbol) {
+      const text = `${name} ${symbol}`.toLowerCase();
+      return memeKeywords.some(keyword => text.includes(keyword));
+    }
+
+    function displayTokens(tokens) {
+      container.innerHTML = "";
+      const filtered = filterCheckbox.checked ? tokens.filter(t => t.isMeme) : tokens;
+
+      if (filtered.length === 0) {
+        container.innerHTML = "هیچ کوینی پیدا نشد.";
+        return;
+      }
+
+      filtered.forEach(token => {
+        const div = document.createElement("div");
+        div.className = "token";
+        div.innerHTML = `<strong>${token.name}</strong> (${token.symbol}) - ${token.date}`;
+        container.appendChild(div);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchTokens);
+  </script>
+</body>
+</html>
